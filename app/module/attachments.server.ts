@@ -27,7 +27,7 @@ const attachmentsUploadHandler: UploadHandler = async (args) => {
   return file.name;
 };
 
-export const uploadeHandler = unstable_composeUploadHandlers(
+export const uploadHandler = unstable_composeUploadHandlers(
   attachmentsUploadHandler,
   unstable_createMemoryUploadHandler(),
 );

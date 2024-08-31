@@ -8,8 +8,6 @@ import {
   isRouteErrorResponse,
   useParams,
 } from '@remix-run/react';
-import { useEffect, useInsertionEffect } from 'react';
-import { writeFile, deleteAttachment } from '~/module/attachments.server';
 
 import { requireUserId } from '~/module/session/session.server';
 import { Button } from '~/components/buttons';
@@ -17,9 +15,10 @@ import { Form, Input, Textarea, Attachment } from '~/components/forms';
 import { H2 } from '~/components/headings';
 import { FloatingActionLink } from '~/components/links';
 import { db } from '~/module/db.server';
-import { uploadeHandler } from '~/module/attachments.server';
+import { uploadHandler } from '~/module/attachments.server';
+import { deleteExpense, parseExpense, removeAttachmentFromExpense, updateExpense } from '~/module/expenses.server';
 
-async function removeAttachment(formData: FormData, id: string, userId: string): Promise<Response> {
+async function handleRemoveAttachment(formData: FormData, id: string, userId: string): Promise<Response> {
   const attachmentUrl = formData.get('attachmentUrl');
 
   if (!attachmentUrl || typeof attachmentUrl !== 'string') {
@@ -29,61 +28,22 @@ async function removeAttachment(formData: FormData, id: string, userId: string):
   const fileName = attachmentUrl.split('/').pop();
   if (!fileName) throw Error('something went wrong');
 
-  await db.expense.update({
-    where: { id_userId: { id, userId } },
-    data: { attachment: null },
-  });
-
-  deleteAttachment(fileName);
+  await removeAttachmentFromExpense(id, userId, fileName);
   return json({ success: true });
 }
 
-async function updateExpense(formData: FormData, id: string, userId: string): Promise<Response> {
-  const title = formData.get('title');
-  const description = formData.get('description');
-  const amount = formData.get('amount');
-
-  if (typeof title !== 'string' || typeof description !== 'string' || typeof amount !== 'string') {
-    throw Error('something went wrong ');
-  }
-
-  const amountNumber = Number.parseFloat(amount);
-
-  if (Number.isNaN(amountNumber)) {
-    throw Error('something went wrong');
-  }
-
-  let attachment: FormDataEntryValue | null | undefined = formData.get('attachment');
-
-  if (!attachment || typeof attachment !== 'string') {
-    attachment = undefined;
-  }
-
-  await db.expense.update({
-    where: {
-      id_userId: { id, userId },
-    },
-    data: {
-      title,
-      description,
-      amount: amountNumber,
-      attachment,
-    },
-  });
-
+async function handleUpdateExpense(formData: FormData, id: string, userId: string): Promise<Response> {
+  const expenseData = parseExpense(formData);
+  await updateExpense({ id, userId, ...expenseData });
   return json({ success: true });
 }
 
-async function deleteExpense(request: Request, id: string, userId: string): Promise<Response> {
+async function handleDeleteExpense(request: Request, id: string, userId: string): Promise<Response> {
   const referer = request.headers.get('referer');
   const redirectPath = referer || '/dashboard/expenses';
 
   try {
-    const expense = await db.expense.delete({ where: { id } });
-
-    if (expense.attachment) {
-      deleteAttachment(expense.attachment);
-    }
+    await deleteExpense(id, userId);
   } catch (err) {
     throw new Response('Not found', { status: 404 });
   }
@@ -109,7 +69,7 @@ export async function action({ params, request }: ActionFunctionArgs) {
   const contentType = request.headers.get('content-type');
 
   if (contentType?.toLowerCase().includes('multipart/form-data')) {
-    formData = await unstable_parseMultipartFormData(request, uploadeHandler);
+    formData = await unstable_parseMultipartFormData(request, uploadHandler);
   } else {
     formData = await request.formData();
   }
@@ -118,15 +78,15 @@ export async function action({ params, request }: ActionFunctionArgs) {
   const userId = await requireUserId(request);
 
   if (intent === 'delete') {
-    return deleteExpense(request, id, userId);
+    return handleDeleteExpense(request, id, userId);
   }
 
   if (intent === 'update') {
-    return updateExpense(formData, id, userId);
+    return handleUpdateExpense(formData, id, userId);
   }
 
   if (intent === 'remove-attachment') {
-    return removeAttachment(formData, id, userId);
+    return handleRemoveAttachment(formData, id, userId);
   }
 
   throw new Response('Bad request', { status: 400 });

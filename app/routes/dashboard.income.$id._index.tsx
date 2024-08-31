@@ -15,9 +15,10 @@ import { Button } from '~/components/buttons';
 import { Attachment, Form, Input, Textarea } from '~/components/forms';
 import { FloatingActionLink } from '~/components/links';
 import { db } from '~/module/db.server';
-import { uploadeHandler, deleteAttachment, writeFile } from '~/module/attachments.server';
+import { uploadHandler } from '~/module/attachments.server';
+import { deleteIncome, updateIncome, removeAttachmentFromIncome, parseInvoice } from '~/module/income.server';
 
-async function removeAttachment(formData: FormData, id: string, userId: string) {
+async function handleRemoveAttachment(formData: FormData, id: string, userId: string) {
   const attachmentUrl = formData.get('attachmentUrl');
 
   if (!attachmentUrl || typeof attachmentUrl !== 'string') {
@@ -27,60 +28,22 @@ async function removeAttachment(formData: FormData, id: string, userId: string) 
   const fileName = attachmentUrl.split('/').pop();
   if (!fileName) throw Error('something went wrong');
 
-  await db.invoice.update({
-    where: { id_userId: { id, userId } },
-    data: { attachment: null },
-  });
-
-  deleteAttachment(fileName);
+  await removeAttachmentFromIncome(id, userId, fileName);
   return json({ success: true });
 }
 
-async function updateIncome(formData: FormData, id: string, userId: string): Promise<Response> {
-  const title = formData.get('title');
-  const description = formData.get('description');
-  const amount = formData.get('amount');
-
-  if (typeof title !== 'string' || typeof description !== 'string' || typeof amount !== 'string') {
-    throw Error('something went wrong');
-  }
-
-  const amountNumber = Number.parseFloat(amount);
-
-  if (Number.isNaN(amountNumber)) {
-    throw Error('something went wrong');
-  }
-
-  let attachment: FormDataEntryValue | null | undefined = formData.get('attcachment');
-
-  if (!attachment || typeof attachment !== 'string') {
-    attachment = undefined;
-  }
-  await db.invoice.update({
-    where: {
-      id_userId: { id, userId },
-    },
-    data: {
-      title,
-      description,
-      amount: amountNumber,
-      attachment,
-    },
-  });
-
+async function handleUpdateIncome(formData: FormData, id: string, userId: string): Promise<Response> {
+  const incomeData = parseInvoice(formData);
+  await updateIncome({ id, userId, ...incomeData });
   return json({ success: true });
 }
 
-async function deleteIncome(request: Request, id: string, userId: string): Promise<Response> {
+async function handleDeleteIncome(request: Request, id: string, userId: string): Promise<Response> {
   const referer = request.headers.get('referer');
   const redirectPath = referer || '/dashboard/income';
 
   try {
-    const income = await db.invoice.delete({ where: { id_userId: { id, userId } } });
-
-    if (income.attachment) {
-      deleteAttachment(income.attachment);
-    }
+    await deleteIncome(id, userId);
   } catch (err) {
     throw new Response('Not found', { status: 404 });
   }
@@ -109,7 +72,7 @@ export async function action({ params, request }: ActionFunctionArgs) {
   const contentType = request.headers.get('content-type');
 
   if (contentType?.toLowerCase().includes('multipart/form-data')) {
-    formData = await unstable_parseMultipartFormData(request, uploadeHandler);
+    formData = await unstable_parseMultipartFormData(request, uploadHandler);
   } else {
     formData = await request.formData();
   }
@@ -119,15 +82,15 @@ export async function action({ params, request }: ActionFunctionArgs) {
   const intent = formData.get('intent');
 
   if (intent === 'update') {
-    return updateIncome(formData, id, userId);
+    return handleUpdateIncome(formData, id, userId);
   }
 
   if (intent === 'delete') {
-    return deleteIncome(request, id, userId);
+    return handleDeleteIncome(request, id, userId);
   }
 
   if (intent === 'remmove-attachment') {
-    return removeAttachment(formData, id, userId);
+    return handleRemoveAttachment(formData, id, userId);
   }
 
   throw new Response('Bad request', { status: 400 });
