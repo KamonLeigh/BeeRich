@@ -45,7 +45,7 @@ async function handleDeleteIncome(request: Request, id: string, userId: string):
   try {
     await deleteIncome(id, userId);
   } catch (err) {
-    throw new Response('Not found', { status: 404 });
+    return json({ success: false });
   }
 
   if (redirectPath.includes(id)) return redirect('/dashboard/income');
@@ -100,7 +100,8 @@ export default function Component() {
   const income = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const actionData = useActionData<typeof action>();
-  const isSubmitting = navigation.state === 'idle' && navigation.formAction === `/dashboard/expenses/${income.id}`;
+  const attachment = navigation.formData?.get('attachment');
+  const isUploadingattachment = attachment instanceof File && attachment.name !== '';
   return (
     <>
       <Form
@@ -113,7 +114,7 @@ export default function Component() {
         <Input label="Title:" type="text" name="title" defaultValue={income.title} />
         <Input label="Amount (in USD)" type="number" name="amount" defaultValue={income.amount} />
         <Textarea label="Description" name="description" defaultValue={income.description || ''} />
-        {income?.attachment ? (
+        {income?.attachment || isUploadingattachment ? (
           <Attachment
             label="Current Attachment"
             attachmentUrl={`/dashboard/expenses/${income.id}/attachments/${income.attachment}`}
@@ -122,7 +123,7 @@ export default function Component() {
           <Input label="New Attachment" type="file" name="attachment" />
         )}
         <Button type="submit" name="intent" value="update">
-          {isSubmitting ? 'Saving...' : 'Save'}
+          Saving
         </Button>
         <p aria-live="polite" className="text-green-600">
           {actionData?.success && 'changes saved!'}

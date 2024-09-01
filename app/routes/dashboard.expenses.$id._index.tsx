@@ -45,7 +45,7 @@ async function handleDeleteExpense(request: Request, id: string, userId: string)
   try {
     await deleteExpense(id, userId);
   } catch (err) {
-    throw new Response('Not found', { status: 404 });
+    return json({ success: false });
   }
 
   if (redirectPath.includes(id)) return redirect('/dashboard/expenses');
@@ -96,7 +96,8 @@ export default function Component() {
   const expense = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const actionData = useActionData<typeof action>();
-  const isSubmitting = navigation.state === 'idle' && navigation.formAction === `/dashboard/expenses/${expense.id}`;
+  const attachment = navigation.formData?.get('attachment');
+  const isUploadingattachment = attachment instanceof File && attachment.name !== '';
   return (
     <>
       <Form
@@ -109,16 +110,16 @@ export default function Component() {
         <Input label="Title:" type="text" name="title" defaultValue={expense.title} required />
         <Input label="Amount (in USD)" type="number" name="amount" defaultValue={expense.amount} required />
         <Textarea label="Description" name="description" defaultValue={expense.description || ''} />
-        {expense?.attachment ? (
+        {expense?.attachment || isUploadingattachment ? (
           <Attachment
             label="Current Attachment"
             attachmentUrl={`/dashboard/expenses/${expense.id}/attachments/${expense.attachment}`}
           />
         ) : (
-          <Input label="New Attachment" type="file" name="attachment" />
+          <Input label="New Attachment" type="file" name="attachment" disabled={isUploadingattachment} />
         )}
-        <Button type="submit" name="intent" value="update" disabled={isSubmitting} isPrimary>
-          {isSubmitting ? 'Saving...' : 'Save'}
+        <Button type="submit" name="intent" value="update" isPrimary>
+          Saving
         </Button>
         <p aria-live="polite" className="text-green-600">
           {actionData?.success && 'Changes saved!'}
