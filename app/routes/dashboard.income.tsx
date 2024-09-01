@@ -38,12 +38,12 @@ export default function Component() {
   return (
     <div className="w-full">
       <H1>Your Income</H1>
-      <Form method="GET" action={location.pathname}>
-        <SearchInput name="q" type="search" label="Search by title" defaultValue={searchQuery} />
-      </Form>
       <div className="mt-10 w-full flex flex-col-reverse lg:flex-row">
         <section className="lg:p-8 w-full lg:max-w-2xl">
-          <h2>All incomes</h2>
+          <h2>All Income</h2>
+          <Form method="GET" action={location.pathname}>
+            <SearchInput name="q" type="search" label="Search by title" defaultValue={searchQuery} />
+          </Form>
           <ul className="flex flex-col">
             {incomes.map((income) => (
               <ListLinkItem

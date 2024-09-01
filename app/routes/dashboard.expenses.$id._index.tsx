@@ -97,7 +97,8 @@ export default function Component() {
   const navigation = useNavigation();
   const actionData = useActionData<typeof action>();
   const attachment = navigation.formData?.get('attachment');
-  const isUploadingattachment = attachment instanceof File && attachment.name !== '';
+  const isUploadingAttachment = attachment instanceof File && attachment.name !== '';
+  const isRemovingAttachment = navigation.formData?.get('intent') === 'remove-attachment';
   return (
     <>
       <Form
@@ -110,7 +111,7 @@ export default function Component() {
         <Input label="Title:" type="text" name="title" defaultValue={expense.title} required />
         <Input label="Amount (in USD)" type="number" name="amount" defaultValue={expense.amount} required />
         <Textarea label="Description" name="description" defaultValue={expense.description || ''} />
-        {expense?.attachment || isUploadingattachment ? (
+        {(expense?.attachment || isUploadingAttachment) && !isRemovingAttachment ? (
           <Attachment
             label="Current Attachment"
             attachmentUrl={`/dashboard/expenses/${expense.id}/attachments/${expense.attachment}`}

@@ -102,19 +102,14 @@ export default function Component() {
   const actionData = useActionData<typeof action>();
   const attachment = navigation.formData?.get('attachment');
   const isUploadingattachment = attachment instanceof File && attachment.name !== '';
+  const isRemovingAttachment = navigation.formData?.get('intent');
   return (
     <>
-      <Form
-        className="w-full h-full p-8"
-        method="POST"
-        action={`/dashboard/income/${income.id}?index`}
-        key={income.id}
-        encType="multipart/form-data"
-      >
+      <Form method="POST" action={`/dashboard/income/${income.id}?index`} key={income.id} encType="multipart/form-data">
         <Input label="Title:" type="text" name="title" defaultValue={income.title} />
         <Input label="Amount (in USD)" type="number" name="amount" defaultValue={income.amount} />
         <Textarea label="Description" name="description" defaultValue={income.description || ''} />
-        {income?.attachment || isUploadingattachment ? (
+        {(income?.attachment || isUploadingattachment) && !isRemovingAttachment ? (
           <Attachment
             label="Current Attachment"
             attachmentUrl={`/dashboard/expenses/${income.id}/attachments/${income.attachment}`}
