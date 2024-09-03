@@ -1,5 +1,5 @@
 import type { Expense, Invoice } from '@prisma/client';
-import type { LoaderFunctionArgs, SerializeFrom, MetaFunction } from '@remix-run/node';
+import type { LoaderFunctionArgs, SerializeFrom, MetaFunction, HeadersFunction } from '@remix-run/node';
 import type { loader as rootLoader } from '~/root';
 import { json } from '@remix-run/node';
 import { Link as RemixLink, Outlet, useLoaderData, useLocation, useRouteError, Form } from '@remix-run/react';
@@ -9,6 +9,12 @@ import { H1 } from '~/components/headings';
 import { NavLink } from '~/components/links';
 import { db } from '~/module/db.server';
 import { requireUserId } from '~/module/session/session.server';
+
+export const headers: HeadersFunction = () => {
+  return {
+    'Cache-Control': 'no-cache, private',
+  };
+};
 
 type LayoutProps = {
   children: React.ReactNode;

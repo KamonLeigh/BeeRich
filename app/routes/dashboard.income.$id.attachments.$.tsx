@@ -18,5 +18,10 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   if (!income || !income.attachment) throw new Response('Not found', { status: 404 });
 
   if (slug !== income.attachment) return redirect(`/dashboard/income/${id}/attachments/${income.attachment}`);
+  const headers = new Headers();
+  headers.set('Etag', income.attachment);
+  if (request.headers.get('If-None-Match') === income.attachment) {
+    return new Response(null, { status: 304, headers });
+  }
   return buildFileResponse(income.attachment);
 }

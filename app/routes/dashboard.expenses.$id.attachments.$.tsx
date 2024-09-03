@@ -19,5 +19,16 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
   if (slug !== expense.attachment) return redirect(`/dashboard/expenses/${id}/attachments/${expense.attachment}`);
 
-  return buildFileResponse(expense.attachment);
+  // This id for demonstration this setting will save the picture on disk. If the user is logged out
+  // the user can still download the file
+  // Etag is a better option because if the user is logged out and make the same request twice it will
+  // send the same file
+
+  const headers = new Headers();
+  // headers.set('Cache-Control', 'private, max-age=31536000, immutable');
+  headers.set('ETag', expense.attachment);
+  if (request.headers.get('If-None-Match') === expense.attachment) {
+    return new Response(null, { status: 304, headers });
+  }
+  return buildFileResponse(expense.attachment, headers);
 }

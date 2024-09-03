@@ -1,7 +1,13 @@
 import { Outlet } from '@remix-run/react';
-
+import type { HeadersFunction } from '@remix-run/node';
 import { NavLink } from '~/components/links';
 import { useUser } from '~/module/session/session';
+
+export const headers: HeadersFunction = () => {
+  return {
+    'Cache-Control': 'Public, max-age=3600',
+  };
+};
 
 export default function Component() {
   const user = useUser();
