@@ -17,9 +17,19 @@ export async function createIncome({ title, description, amount, attachment, use
       description,
       amount,
       currencyCode: 'USD',
-      User: {
+      attachment,
+      user: {
         connect: {
           id: userId,
+        },
+      },
+      logs: {
+        create: {
+          title,
+          description,
+          amount,
+          currencyCode: 'USD',
+          user: { connect: { id: userId } },
         },
       },
     },
@@ -53,6 +63,15 @@ export async function updateIncome({ id, title, description, amount, attachment,
       description,
       amount,
       attachment,
+      logs: {
+        create: {
+          title,
+          description,
+          amount,
+          currencyCode: 'USD',
+          user: { connect: { id: userId } },
+        },
+      },
     },
   });
 }
