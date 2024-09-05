@@ -22,7 +22,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   // This id for demonstration this setting will save the picture on disk. If the user is logged out
   // the user can still download the file
   // Etag is a better option because if the user is logged out and make the same request twice it will
-  // send the same file
+  // send the same file. Unlike the first method the server is hit
 
   const headers = new Headers();
   // headers.set('Cache-Control', 'private, max-age=31536000, immutable');
