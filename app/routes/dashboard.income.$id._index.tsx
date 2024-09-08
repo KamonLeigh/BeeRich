@@ -1,6 +1,13 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
-import { json, redirect, unstable_createFileUploadHandler, unstable_parseMultipartFormData } from '@remix-run/node';
 import {
+  defer,
+  json,
+  redirect,
+  unstable_createFileUploadHandler,
+  unstable_parseMultipartFormData,
+} from '@remix-run/node';
+import {
+  Await,
   useActionData,
   useLoaderData,
   useNavigation,
@@ -8,15 +15,16 @@ import {
   isRouteErrorResponse,
   useRouteError,
 } from '@remix-run/react';
-
+import { Suspense } from 'react';
 import { requireUserId } from '~/module/session/session.server';
-import { H2 } from '~/components/headings';
+import { H2, H3 } from '~/components/headings';
 import { Button } from '~/components/buttons';
 import { Attachment, Form, Input, Textarea } from '~/components/forms';
 import { FloatingActionLink } from '~/components/links';
 import { db } from '~/module/db.server';
 import { uploadHandler } from '~/module/attachments.server';
 import { deleteIncome, updateIncome, removeAttachmentFromIncome, parseInvoice } from '~/module/income.server';
+import ExpenseLogs from '~/components/ExpenseLogs';
 
 async function handleRemoveAttachment(formData: FormData, id: string, userId: string) {
   const attachmentUrl = formData.get('attachmentUrl');
@@ -56,11 +64,17 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
   const { id } = params;
   const userId = await requireUserId(request);
   if (!id) throw Error('id route parameter must be defined');
+  const incomeLogs = db.invoiceLog
+    .findMany({
+      orderBy: { createdAt: 'desc' },
+      where: { invoiceId: id, userId },
+    })
+    .then((income) => income);
   const income = await db.invoice.findUnique({ where: { id_userId: { id, userId } } });
 
   if (!income) throw new Response('Not found', { status: 404 });
 
-  return json(income);
+  return defer({ income, incomeLogs });
 }
 
 export async function action({ params, request }: ActionFunctionArgs) {
@@ -97,7 +111,7 @@ export async function action({ params, request }: ActionFunctionArgs) {
 }
 
 export default function Component() {
-  const income = useLoaderData<typeof loader>();
+  const { income, incomeLogs } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const actionData = useActionData<typeof action>();
   const attachment = navigation.formData?.get('attachment');
@@ -124,6 +138,12 @@ export default function Component() {
           {actionData?.success && 'changes saved!'}
         </p>
       </Form>
+      <H3>Income History </H3>
+      <Suspense fallback="Loading income history">
+        <Await resolve={incomeLogs} errorElement="There was an Error loading the income history ">
+          {(resolvedIncomeLogs) => <ExpenseLogs expenseLogs={resolvedIncomeLogs} />}
+        </Await>
+      </Suspense>
       <FloatingActionLink to="/dashboard/income">Add Income</FloatingActionLink>
     </>
   );
