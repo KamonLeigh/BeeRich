@@ -1,6 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
-import { json, redirect, unstable_parseMultipartFormData } from '@remix-run/node';
+import { defer, json, redirect, unstable_parseMultipartFormData } from '@remix-run/node';
 import {
+  Await,
   useActionData,
   useLoaderData,
   useNavigation,
@@ -8,15 +9,16 @@ import {
   isRouteErrorResponse,
   useParams,
 } from '@remix-run/react';
-
+import { Suspense } from 'react';
 import { requireUserId } from '~/module/session/session.server';
 import { Button } from '~/components/buttons';
 import { Form, Input, Textarea, Attachment } from '~/components/forms';
-import { H2 } from '~/components/headings';
+import { H2, H3 } from '~/components/headings';
 import { FloatingActionLink } from '~/components/links';
 import { db } from '~/module/db.server';
 import { uploadHandler } from '~/module/attachments.server';
 import { deleteExpense, parseExpense, removeAttachmentFromExpense, updateExpense } from '~/module/expenses.server';
+import ExpenseLogs from '~/components/ExpenseLogs';
 
 async function handleRemoveAttachment(formData: FormData, id: string, userId: string): Promise<Response> {
   const attachmentUrl = formData.get('attachmentUrl');
@@ -55,10 +57,17 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
   const { id } = params;
   const userId = await requireUserId(request);
   if (!id) throw Error('id route parameter must be defined');
+  const expenseLogs = db.expenseLog
+    .findMany({
+      orderBy: { createdAt: 'desc' },
+      where: { expenseId: id, userId },
+    })
+    .then((expense) => expense);
+  // then((expense) => new Promise((resovle) => setTimeout(() => resovle(expense), 4000)));
   const expense = await db.expense.findUnique({ where: { id_userId: { id, userId } } });
   if (!expense) throw new Response('Not found', { status: 404 });
 
-  return json(expense);
+  return defer({ expense, expenseLogs });
 }
 
 export async function action({ params, request }: ActionFunctionArgs) {
@@ -93,7 +102,7 @@ export async function action({ params, request }: ActionFunctionArgs) {
 }
 
 export default function Component() {
-  const expense = useLoaderData<typeof loader>();
+  const { expense, expenseLogs } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const actionData = useActionData<typeof action>();
   const attachment = navigation.formData?.get('attachment');
@@ -102,7 +111,7 @@ export default function Component() {
   return (
     <>
       <Form
-        className="w-full h-full p-8"
+        className="w-full p-8"
         method="POST"
         action={`/dashboard/expenses/${expense.id}?index`}
         key={expense.id}
@@ -126,6 +135,14 @@ export default function Component() {
           {actionData?.success && 'Changes saved!'}
         </p>
       </Form>
+      <section className="my-5 w-full m-auto lg:max-w-3xl flex flex-col items-center justify-center gap-5">
+        <H3>Expense History</H3>
+        <Suspense fallback="Loading expense history">
+          <Await resolve={expenseLogs} errorElement="There was an Error laoding the expense history. please try again">
+            {(resolvedExpenseLogs) => <ExpenseLogs expenseLogs={resolvedExpenseLogs} />}
+          </Await>
+        </Suspense>
+      </section>
       <FloatingActionLink to="/dashboard/expenses">Add expenses</FloatingActionLink>
     </>
   );

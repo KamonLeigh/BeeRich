@@ -17,9 +17,18 @@ export async function createExpense({ title, description, amount, attachment, us
       amount,
       currencyCode: 'USD',
       attachment,
-      User: {
+      user: {
         connect: {
           id: userId,
+        },
+      },
+      logs: {
+        create: {
+          title,
+          description,
+          amount,
+          currencyCode: 'USD',
+          user: { connect: { id: userId } },
         },
       },
     },
@@ -53,6 +62,15 @@ export async function updateExpense({ id, title, description, amount, attachment
       description,
       amount,
       attachment,
+      logs: {
+        create: {
+          title,
+          description,
+          amount,
+          currencyCode: 'USD',
+          user: { connect: { id: userId } },
+        },
+      },
     },
   });
 }

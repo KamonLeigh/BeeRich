@@ -1,4 +1,4 @@
-import type { User } from '@prisma/client';
+import type { Expense, Invoice, User } from '@prisma/client';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
@@ -172,6 +172,32 @@ function createInvoice(incomeData: (typeof income)[number], user: User) {
   });
 }
 
+function createExpenseLog({ id, title, description, currencyCode, amount, userId }: Expense) {
+  return db.expenseLog.create({
+    data: {
+      title,
+      description,
+      currencyCode,
+      amount,
+      userId,
+      expenseId: id,
+    },
+  });
+}
+
+function createInvoiceLog({ userId, id, title, description, currencyCode, amount }: Invoice) {
+  return db.invoiceLog.create({
+    data: {
+      title,
+      description,
+      currencyCode,
+      amount,
+      userId,
+      invoiceId: id,
+    },
+  });
+}
+
 console.log('🌱 Seeding the database...');
 const start = performance.now();
 const user = await db.user.create({
@@ -181,8 +207,11 @@ const user = await db.user.create({
     password: await bcrypt.hash('BeeRich', 10),
   },
 });
-const expensePromises = expenses.map((expense) => createExpense(expense, user));
-const invoicePromises = income.map((income) => createInvoice(income, user));
-await Promise.all([...expensePromises, ...invoicePromises]);
+const expensePromises = Promise.all(expenses.map((expense) => createExpense(expense, user)));
+const invoicePromises = Promise.all(income.map((income) => createInvoice(income, user)));
+const [createdExpenses, createdInvoices] = await Promise.all([expensePromises, invoicePromises]);
+const expenseLogPromises = createdExpenses.map((expense) => createExpenseLog(expense));
+const invoiceLogPromises = createdInvoices.map((invoice) => createInvoiceLog(invoice));
+await Promise.all([...expenseLogPromises, ...invoiceLogPromises]);
 const end = performance.now();
 console.log(`🚀 Seeded the database. Done in ${Math.round(end - start)}ms`);
