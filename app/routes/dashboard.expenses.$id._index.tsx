@@ -63,7 +63,7 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
       where: { expenseId: id, userId },
     })
     .then((expense) => expense);
-  // then((expense) => new Promise((resovle) => setTimeout(() => resovle(expense), 4000)));
+  // then((expense) => new Promise((resovle) => setTimeout(() => resovle(expense), 2000)));
   const expense = await db.expense.findUnique({ where: { id_userId: { id, userId } } });
   if (!expense) throw new Response('Not found', { status: 404 });
 
@@ -138,7 +138,7 @@ export default function Component() {
       <section className="my-5 w-full m-auto lg:max-w-3xl flex flex-col items-center justify-center gap-5">
         <H3>Expense History</H3>
         <Suspense fallback="Loading expense history">
-          <Await resolve={expenseLogs} errorElement="There was an Error laoding the expense history. please try again">
+          <Await resolve={expenseLogs} errorElement="There was an Error loading the expense history. please try again">
             {(resolvedExpenseLogs) => <ExpenseLogs expenseLogs={resolvedExpenseLogs} />}
           </Await>
         </Suspense>
