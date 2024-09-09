@@ -13,6 +13,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const formData = await unstable_parseMultipartFormData(request, uploadHandler);
   const incomeData = parseInvoice(formData);
   const income = await createIncome({ userId, ...incomeData });
+  emitter.emit(userId);
   return redirect(`/dashboard/income/${income.id}`);
 }
 
