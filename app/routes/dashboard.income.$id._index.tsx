@@ -43,6 +43,7 @@ async function handleRemoveAttachment(formData: FormData, id: string, userId: st
 async function handleUpdateIncome(formData: FormData, id: string, userId: string): Promise<Response> {
   const incomeData = parseInvoice(formData);
   await updateIncome({ id, userId, ...incomeData });
+  emitter.emit(userId);
   return json({ success: true });
 }
 
@@ -55,7 +56,7 @@ async function handleDeleteIncome(request: Request, id: string, userId: string):
   } catch (err) {
     return json({ success: false });
   }
-
+  emitter.emit(userId);
   if (redirectPath.includes(id)) return redirect('/dashboard/income');
   return redirect(redirectPath);
 }

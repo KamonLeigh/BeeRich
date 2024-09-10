@@ -3,6 +3,7 @@ import type { LoaderFunctionArgs, SerializeFrom, MetaFunction, HeadersFunction }
 import type { loader as rootLoader } from '~/root';
 import { json } from '@remix-run/node';
 import { Link as RemixLink, Outlet, useLoaderData, useLocation, useRouteError, Form } from '@remix-run/react';
+import { useEventSource } from '~/module/server-sent-events/event-source';
 
 import { Container } from '~/components/containers';
 import { H1 } from '~/components/headings';
@@ -47,6 +48,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 export default function Component() {
   const { firstExpense, firstIncome } = useLoaderData<typeof loader>();
+  useEventSource();
 
   return (
     <Layout firstIncome={firstIncome} firstExpense={firstExpense}>

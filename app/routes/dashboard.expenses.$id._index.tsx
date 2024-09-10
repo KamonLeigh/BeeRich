@@ -31,12 +31,14 @@ async function handleRemoveAttachment(formData: FormData, id: string, userId: st
   if (!fileName) throw Error('something went wrong');
 
   await removeAttachmentFromExpense(id, userId, fileName);
+  emitter.emit(userId);
   return json({ success: true });
 }
 
 async function handleUpdateExpense(formData: FormData, id: string, userId: string): Promise<Response> {
   const expenseData = parseExpense(formData);
   await updateExpense({ id, userId, ...expenseData });
+  emitter.emit(userId);
   return json({ success: true });
 }
 
@@ -49,7 +51,7 @@ async function handleDeleteExpense(request: Request, id: string, userId: string)
   } catch (err) {
     return json({ success: false });
   }
-
+  emitter.emit(userId);
   if (redirectPath.includes(id)) return redirect('/dashboard/expenses');
   return redirect(redirectPath);
 }
