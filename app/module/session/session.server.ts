@@ -1,5 +1,6 @@
 import type { User } from '@prisma/client';
 import { createCookieSessionStorage, redirect } from '@remix-run/node';
+import { setVistitoeCookieData } from '../server-sent-events/visitors.server';
 import bcrypt from 'bcryptjs';
 
 import { db } from '~/module/db.server';
@@ -125,7 +126,10 @@ export async function requireUserId(request: Request) {
   const userId = session.get('userId');
 
   if (!userId || typeof userId !== 'string') {
-    throw redirect('/login');
+    const headers = await setVistitoeCookieData({ redirectUrl: request.url });
+    throw redirect('/login', {
+      headers,
+    });
   }
 
   return userId;

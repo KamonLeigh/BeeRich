@@ -1,5 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction, LinksFunction } from '@remix-run/node';
 import { useActionData, useNavigation } from '@remix-run/react';
+import { getVisitorCookieData } from '~/module/server-sent-events/visitors.server';
 import { redirect, json } from '@remix-run/node';
 import { InlineError } from '~/components/texts';
 import { Button } from '~/components/buttons';
@@ -41,8 +42,9 @@ export async function action({ request }: ActionFunctionArgs) {
 
   try {
     const user = await loginUser({ email, password });
+    const { redirectUrl } = await getVisitorCookieData(request);
 
-    return redirect('/dashboard', {
+    return redirect(redirectUrl || '/dashboard', {
       headers: await createUserSession(user),
     });
   } catch (error: any) {
