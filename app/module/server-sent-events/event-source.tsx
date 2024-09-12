@@ -5,7 +5,7 @@ export function useEventSource() {
   const { revalidate } = useRevalidator();
   useEffect(() => {
     function handler(event: MessageEvent) {
-      console.log(`Receives server event [${new Date().toLocaleTimeString()}]`);
+      console.log(`Receives server event [${new Date().toLocaleTimeString()}]`, event.data);
       revalidate();
     }
 
