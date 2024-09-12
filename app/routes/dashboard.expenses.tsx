@@ -1,4 +1,5 @@
 import type { LoaderFunctionArgs } from '@remix-run/node';
+import type { Prisma } from '@prisma/client';
 import { json } from '@remix-run/node';
 import {
   Outlet,
@@ -18,22 +19,26 @@ import { ListLinkItem } from '~/components/links';
 import { db } from '~/module/db.server';
 
 export async function loader({ request }: LoaderFunctionArgs) {
+  const PAGE_SIZE: Number = 10;
   const userId = await requireUserId(request);
   const url = new URL(request.url);
   const searchString = url.searchParams.get('q');
-  const expenses = await db.expense.findMany({
-    orderBy: {
-      createdAt: 'desc',
-    },
-    where: {
-      title: {
-        contains: searchString ? searchString : '',
-      },
-      userId: userId,
-    },
-  });
+  const pageNumberString = url.searchParams.get('page');
+  const pageNumber = pageNumberString ? Number(pageNumberString) : 1;
 
-  return json(expenses);
+  const where: Prisma.ExpenseWhereInput = {
+    userId,
+    title: {
+      contains: searchString ? searchString : '',
+    },
+  };
+
+  const [count, expenses] = await db.$transaction([
+    db.expense.count({ where }),
+    db.expense.findMany({ orderBy: { createdAt: 'desc' }, take: PAGE_SIZE, skip: (pageNumber - 1) * PAGE_SIZE, where }),
+  ]);
+
+  return json({ count, expenses });
 }
 
 export default function Component() {
