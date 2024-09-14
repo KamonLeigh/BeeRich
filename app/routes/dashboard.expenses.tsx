@@ -18,8 +18,9 @@ import { SearchInput } from '~/components/forms';
 import { ListLinkItem } from '~/components/links';
 import { db } from '~/module/db.server';
 
+const PAGE_SIZE: Number = 10;
+
 export async function loader({ request }: LoaderFunctionArgs) {
-  const PAGE_SIZE: Number = 10;
   const userId = await requireUserId(request);
   const url = new URL(request.url);
   const searchString = url.searchParams.get('q');
@@ -43,11 +44,14 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 export default function Component() {
   const navigation = useNavigation();
-  const expenses = useLoaderData<typeof loader>();
+  const { expenses, count } = useLoaderData<typeof loader>();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const submit = useSubmit();
   const searchQuery = searchParams.get('q') || '';
+  const pageNumber = searchParams.get('page') ? Number(searchParams.get('page')) : 1;
+  const isOnFirstPage = pageNumber === 1;
+  const showPagination = count > PAGE_SIZE || !isOnFirstPage;
   const id = useParams();
 
   return (
@@ -57,6 +61,7 @@ export default function Component() {
         <section className="lg:p-8 w-full lg:max-w-2xl">
           <h2>All expenses</h2>
           <Form method="GET" action={location.pathname}>
+            <input type="hidden" name="page" value={1} />
             <SearchInput name="q" type="search" label="Search by title" defaultValue={searchQuery} />
           </Form>
           <ul className="flex flex-col">
@@ -85,6 +90,17 @@ export default function Component() {
               </ListLinkItem>
             ))}
           </ul>
+          {showPagination && (
+            <Form method="GET" action={location.pathname} className="flex justify-between pb-10">
+              <input type="hidden" name="q" value={searchQuery} />
+              <button type="submit" name="page" value={pageNumber - 1} disabled={pageNumber === 1}>
+                Previous
+              </button>
+              <button type="submit" name="page" value={pageNumber + 1} disabled={count <= pageNumber * PAGE_SIZE}>
+                Next
+              </button>
+            </Form>
+          )}
         </section>
         <section className={clsx('lg:p-8 w-full', navigation.state === 'loading' && 'motion-safe:animate-pulse')}>
           <Outlet />
